@@ -64,7 +64,7 @@ def main() -> None:
             encrypted_password = cipher_suite.encrypt(password.encode())
             with open("passwords.csv", "a") as f:
                 f.write(f"{account},{username},{encrypted_password.decode()}\n")
-                return main()
+            return main()
         case 2:
             print("get password from account")
             account = input("Enter account: ")
@@ -75,8 +75,7 @@ def main() -> None:
                         password = cipher_suite.decrypt(password.encode()).decode()
                         print(f"username: {username}")
                         print(f"password: {password}")
-                        return main()
-            print("Account not found")
+            print("Accounts searched")
             return main()
         case 3:
             print("change password")
