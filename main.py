@@ -6,11 +6,9 @@ import base64
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
-cipher_suite: Fernet | None = None
-
 
 def main() -> None:
-    # menu
+    global cipher_suite
 
     active_password = os.path.exists("secrets.txt")
 
@@ -30,14 +28,13 @@ def main() -> None:
             is_the_pass = bcrypt.checkpw(password.encode(), encrypted_pass)
             if is_the_pass:
                 print("password is correct")
-                salt = b"\x12\xab..."  # Un valor fijo que guardas en tu código
+                salt = b"\x12\xab..."
                 kdf = PBKDF2HMAC(
                     algorithm=hashes.SHA256(),
                     length=32,
                     salt=salt,
                     iterations=100000,
                 )
-                # Esta es la llave que usas para Fernet
                 llave = base64.urlsafe_b64encode(kdf.derive(password.encode()))
                 cipher_suite = Fernet(llave)
             else:
