@@ -5,8 +5,21 @@ from cryptography.fernet import Fernet
 import base64
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from typing import List, Optional, Tuple, TypedDict, cast
 
 DB = "passwords.json"
+
+
+class PasswordEntry(TypedDict):
+    account: str
+    username: str
+    password: str
+
+
+class Database(TypedDict):
+    salt: str
+    validation: str
+    passwords: List[PasswordEntry]
 
 
 def get_key(password: str, salt: bytes) -> bytes:
@@ -19,7 +32,7 @@ def get_key(password: str, salt: bytes) -> bytes:
     return base64.urlsafe_b64encode(kdf.derive(password.encode()))
 
 
-def load_key():  # pyright: ignore[reportUnknownParameterType]
+def load_key() -> Tuple[Optional[bytes], Optional[Database]]:
     if not os.path.exists(DB):
         print("No password database found. Creating a new one.")
         password = getpass.getpass("Enter your master password: ")
@@ -28,29 +41,33 @@ def load_key():  # pyright: ignore[reportUnknownParameterType]
         f = Fernet(key)
         validation = f.encrypt(b"DAMIAN")
 
-        data = {  # pyright: ignore[reportUnknownVariableType]
-            "salt": base64.b64encode(salt).decode(),
-            "validation": base64.b64encode(validation).decode(),
-            "passwords": [],
-        }
+        data = cast(
+            Database,
+            {
+                "salt": base64.b64encode(salt).decode(),
+                "validation": base64.b64encode(validation).decode(),
+                "passwords": [],
+            },
+        )
 
         with open(DB, "w") as file:
             json.dump(data, file)
 
-        return key, data  # pyright: ignore[reportUnknownVariableType]
+        return key, data
     else:
         with open(DB, "r") as file:
-            data = json.load(file)
+            data = cast(Database, json.load(file))
             password = getpass.getpass("Enter your password: ")
             salt = base64.b64decode(data["salt"])
             validation = base64.b64decode(data["validation"])
             key = get_key(password, salt)
             f = Fernet(key)
-            if f.decrypt(validation) != b"DAMIAN":
+            try:
+                if f.decrypt(validation) == b"DAMIAN":
+                    return key, data
+            except Exception:
                 print("Invalid password. Please try again.")
-                return
-            return key, data  # pyright: ignore[reportUnknownVariableType]
-    return None, None  # pyright: ignore[reportUnknownVariableType]
+    return None, None
 
 
 def main() -> None:
@@ -70,7 +87,7 @@ def main() -> None:
         print("4. Exit")
 
         choice: int = int(input("Enter your choice: "))
-        while choice < 1 and choice > 4:
+        while choice < 1 or choice > 4:
             choice = int(input("Enter a valid choice (1-4): "))
 
         match choice:
@@ -115,7 +132,6 @@ def main() -> None:
                 print("Exit")
                 exit()
             case _:
-                # handle any other integer choices (non-exhaustive handling)
                 print("Invalid choice")
 
 
